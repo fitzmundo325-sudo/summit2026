@@ -181,11 +181,12 @@ function drawPhoto(ctx, x, y, w, h, story, variant, photoImage = null) {
   ctx.shadowColor = 'transparent';
   const g = ctx.createLinearGradient(0, 0, w, h); g.addColorStop(0, story.tone[0]); g.addColorStop(1, story.tone[1]);ctx.fillStyle = g; ctx.fillRect(0, 0, w, h);
   if(photoImage){
-    // Crop uploaded images to the voyage-photo frame, then lift their exposure
-    // so they stay vivid against the darker paper and lighting.
+    // Crop uploaded images to the voyage-photo frame, then display-correct
+    // them brighter so the dim scene does not make faces read brown.
     const imageRatio=photoImage.width/photoImage.height,frameRatio=w/h;let sx=0,sy=0,sw=photoImage.width,sh=photoImage.height;
     if(imageRatio>frameRatio){sw=photoImage.height*frameRatio;sx=(photoImage.width-sw)/2}else{sh=photoImage.width/frameRatio;sy=(photoImage.height-sh)/2}
-    ctx.filter='brightness(1.2) contrast(1.06) saturate(1.04)';
+    ctx.imageSmoothingEnabled=true;ctx.imageSmoothingQuality='high';
+    ctx.filter='brightness(1.28) contrast(1.04) saturate(1.08)';
     ctx.drawImage(photoImage,sx,sy,sw,sh,0,0,w,h);
     ctx.filter='none';
   }else{
@@ -248,7 +249,7 @@ function createPageTexture(story, side, index, photoImage = null) {
         ctx.font='italic 25px Georgia';ctx.fillStyle='rgba(66,39,20,.7)';ctx.fillText('Voyage memory no. 01',76,178);drawPhoto(ctx,132,225,750,390,story,index,photoImage);drawTornCard(ctx,190,680,650,210);drawCompassRose(ctx,112,820,52);
       }else{
         ctx.font='600 16px Montserrat';ctx.fillStyle='rgba(76,46,23,.62)';ctx.textAlign='center';ctx.fillText(`VOYAGE RECORD  ·  0${index+1}`,s/2,150);
-        drawPhoto(ctx,122,190,780,445,story,index,photoImage);drawCompassRose(ctx,115,805,54);drawTreasureRoute(ctx,s,index);
+        drawPhoto(ctx,122,190,780,445,story,index,photoImage);drawCompassRose(ctx,115,805,54);if(!photoImage)drawTreasureRoute(ctx,s,index);
         ctx.font='italic 58px Georgia';ctx.fillStyle='#4e3825';ctx.textAlign='center';wrapText(ctx,story.title,s/2,720,s-260,62);
         ctx.font='italic 26px Georgia';ctx.fillStyle='rgba(58,39,22,.78)';ctx.textAlign='center';wrapText(ctx,story.quote,155,815,714,37);
       }
@@ -261,12 +262,12 @@ function createPageTexture(story, side, index, photoImage = null) {
       ctx.strokeStyle='rgba(70,43,22,.24)'; ctx.lineWidth=2;
       lines.forEach((_,i)=>{ctx.beginPath();ctx.moveTo(175,755+i*45);ctx.lineTo(600,755+i*45);ctx.stroke()});
       ctx.fillStyle='rgba(68,43,22,.2)'; ctx.font='italic 96px Georgia'; ctx.fillText(`${index+1}`,760,805);
-      drawCompassRose(ctx,815,755,78);drawTreasureRoute(ctx,s,index+2);drawJollyRoger(ctx,865,270,110,.18);
+      drawCompassRose(ctx,815,755,78);if(!photoImage){drawTreasureRoute(ctx,s,index+2);drawJollyRoger(ctx,865,270,110,.18)}
     }
     ctx.fillStyle='rgba(63,40,22,.46)'; ctx.textAlign='center'; ctx.font='500 14px Montserrat'; ctx.fillText(String(index*2+(side==='front'?1:2)).padStart(2,'0'),s/2,965);
     });
     ctx.restore();
-  }, PAGE_TEXTURE_SIZE);
+  }, photoImage ? 1024 : PAGE_TEXTURE_SIZE);
 }
 
 function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
@@ -366,10 +367,10 @@ const pageVertex = `
   }`;
 function pageMaterial(texture, side, backFace=false) {
   return new THREE.ShaderMaterial({
-    uniforms:{map:{value:texture},uTurn:{value:0},uCurl:{value:.85},uReveal:{value:1},uWarmth:{value:new THREE.Color(0xffe2b0)},uPhotoRect:{value:new THREE.Vector4(0,0,0,0)},uPhotoProtect:{value:0},uMirrorX:{value:backFace?1:0}},
+    uniforms:{map:{value:texture},uTurn:{value:0},uCurl:{value:.85},uReveal:{value:1},uWarmth:{value:new THREE.Color(0xffe2b0)},uPhotoRect:{value:new THREE.Vector4(0,0,0,0)},uPhotoProtect:{value:0},uPhotoBrightness:{value:1},uMirrorX:{value:backFace?1:0}},
     vertexShader:pageVertex,
-    fragmentShader:`uniform sampler2D map; uniform vec3 uWarmth; uniform vec4 uPhotoRect; uniform float uPhotoProtect; uniform float uReveal; uniform float uMirrorX; varying vec2 vUv2; void main(){vec2 pageUv=mix(vUv2,vec2(1.0-vUv2.x,vUv2.y),uMirrorX);vec4 c=texture2D(map,pageUv);float wobble=sin(pageUv.y*91.0)*.012+sin(pageUv.x*67.0)*.009+sin((pageUv.x+pageUv.y)*143.0)*.004;float edge=smoothstep(0.0,.038+wobble,pageUv.x)*smoothstep(0.0,.041-wobble,1.0-pageUv.x)*smoothstep(0.0,.03-wobble,pageUv.y)*smoothstep(0.0,.032+wobble,1.0-pageUv.y);if(edge<.18)discard;float grain=fract(sin(dot(floor(pageUv*vec2(31.0,23.0)),vec2(12.9898,78.233)))*43758.5453);float threshold=pageUv.y*.35+grain*.65;float painted=smoothstep(threshold-.14,threshold+.08,uReveal*1.12);vec3 bare=vec3(.72,.57,.34)*(1.0-pageUv.x*.06);c.rgb=mix(bare,c.rgb,painted);float photoMask=step(uPhotoRect.x,pageUv.x)*step(pageUv.x,uPhotoRect.z)*step(uPhotoRect.y,pageUv.y)*step(pageUv.y,uPhotoRect.w)*uPhotoProtect;vec3 warmth=mix(uWarmth,vec3(1.0),photoMask);c.rgb*=mix(.31,1.0,edge)*warmth;gl_FragColor=vec4(c.rgb,1.0);}`,
-    side, transparent:false, depthWrite:true, polygonOffset:true, polygonOffsetFactor:backFace?1:-1, polygonOffsetUnits:backFace?1:-1
+    fragmentShader:`uniform sampler2D map; uniform vec3 uWarmth; uniform vec4 uPhotoRect; uniform float uPhotoProtect; uniform float uPhotoBrightness; uniform float uReveal; uniform float uMirrorX; varying vec2 vUv2; void main(){vec2 pageUv=mix(vUv2,vec2(1.0-vUv2.x,vUv2.y),uMirrorX);float photoMask=step(uPhotoRect.x,pageUv.x)*step(pageUv.x,uPhotoRect.z)*step(uPhotoRect.y,pageUv.y)*step(pageUv.y,uPhotoRect.w)*uPhotoProtect;vec4 c=texture2D(map,pageUv);float wobble=sin(pageUv.y*91.0)*.012+sin(pageUv.x*67.0)*.009+sin((pageUv.x+pageUv.y)*143.0)*.004;float edge=smoothstep(0.0,.038+wobble,pageUv.x)*smoothstep(0.0,.041-wobble,1.0-pageUv.x)*smoothstep(0.0,.03-wobble,pageUv.y)*smoothstep(0.0,.032+wobble,1.0-pageUv.y);if(edge<.18&&photoMask<.5)discard;float grain=fract(sin(dot(floor(pageUv*vec2(31.0,23.0)),vec2(12.9898,78.233)))*43758.5453);float threshold=pageUv.y*.35+grain*.65;float painted=smoothstep(threshold-.14,threshold+.08,uReveal*1.12);vec3 bare=vec3(.72,.57,.34)*(1.0-pageUv.x*.06);c.rgb=mix(bare,c.rgb,mix(painted,1.0,photoMask));vec3 warmth=mix(uWarmth,vec3(1.0),photoMask);c.rgb*=mix(mix(.31,1.0,edge),1.0,photoMask)*warmth;c.rgb=mix(c.rgb,min(pow(c.rgb,vec3(.72))*uPhotoBrightness,vec3(1.0)),photoMask);gl_FragColor=vec4(c.rgb,1.0);}`,
+    side, transparent:false, depthWrite:true, toneMapped:false, polygonOffset:true, polygonOffsetFactor:backFace?1:-1, polygonOffsetUnits:backFace?1:-1
   });
 }
 
@@ -803,6 +804,7 @@ function setPhotoColorProtection(material,pageIndex,side){
   const rect=photoRectForPageSide(pageIndex,side);
   material.uniforms.uPhotoRect.value.set(rect.x/1024,1-(rect.y+rect.h)/1024,(rect.x+rect.w)/1024,1-rect.y/1024);
   material.uniforms.uPhotoProtect.value=1;
+  material.uniforms.uPhotoBrightness.value=1.18;
 }
 function applyPhotoToFace(photo,pageIndex,side,{notify=true}={}){
   if(turning){if(notify)showToast('Wait for the page to settle');return false}
