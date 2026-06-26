@@ -27,9 +27,9 @@ const prefersReducedMotion = matchMedia('(prefers-reduced-motion: reduce)').matc
 const compact = matchMedia('(max-width: 760px)').matches;
 const highQuality = !compact && devicePixelRatio <= 2;
 const scene = new THREE.Scene();
-// Clear morning light: cool air with a soft cream sun.
-scene.background = new THREE.Color(0xdfeef6);
-scene.fog = new THREE.FogExp2(0xe9f4f8, compact ? 0.005 : 0.003);
+// Low antique morning light, kept dim enough to frame the book.
+scene.background = new THREE.Color(0x8f7248);
+scene.fog = new THREE.FogExp2(0x8f7248, compact ? 0.005 : 0.003);
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: highQuality, alpha: false, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(devicePixelRatio, compact ? 1.35 : 1.8));
@@ -38,7 +38,7 @@ renderer.shadowMap.enabled = true;
 renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 renderer.outputColorSpace = THREE.SRGBColorSpace;
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
-renderer.toneMappingExposure = 1.42;
+renderer.toneMappingExposure = 1.12;
 
 const camera = new THREE.PerspectiveCamera(compact ? 40 : 32, innerWidth / innerHeight, 0.1, 80);
 // Begin almost directly above the chart, then descend into the journal.
@@ -231,10 +231,10 @@ function createPageTexture(story, side, index, photoImage = null) {
     ctx.scale(textureSize/s,textureSize/s);
     withSeededRandom(1718+index*97,()=>{
     const parchment = ctx.createRadialGradient(s*.45,s*.42,20,s*.5,s*.5,s*.75);
-    parchment.addColorStop(0,'#e5d5ae'); parchment.addColorStop(.72,'#cbb88e'); parchment.addColorStop(1,'#9c7f58');
+    parchment.addColorStop(0,'#F0E2C8'); parchment.addColorStop(.72,'#d5bd93'); parchment.addColorStop(1,'#a88351');
     ctx.fillStyle = parchment; ctx.fillRect(0,0,s,s); noise(ctx,s);
     // Scorched perimeter, water stains and irregular torn-looking inner border.
-    const edge=ctx.createRadialGradient(s/2,s/2,s*.38,s/2,s/2,s*.72);edge.addColorStop(.62,'rgba(65,31,11,0)');edge.addColorStop(.9,'rgba(55,24,8,.28)');edge.addColorStop(1,'rgba(24,9,3,.72)');ctx.fillStyle=edge;ctx.fillRect(0,0,s,s);
+    const edge=ctx.createRadialGradient(s/2,s/2,s*.38,s/2,s/2,s*.72);edge.addColorStop(.62,'rgba(65,31,11,0)');edge.addColorStop(.9,'rgba(55,24,8,.24)');edge.addColorStop(1,'rgba(24,9,3,.58)');ctx.fillStyle=edge;ctx.fillRect(0,0,s,s);
     ctx.strokeStyle='rgba(67,37,17,.25)';ctx.lineWidth=5;ctx.setLineDash([22,8,5,11]);ctx.strokeRect(38,36,s-76,s-72);ctx.setLineDash([]);
     for(let i=0;i<9;i++){const x=Math.random()*s,y=Math.random()>0.5?Math.random()*70:s-Math.random()*70;const stain=ctx.createRadialGradient(x,y,0,x,y,22+Math.random()*45);stain.addColorStop(0,'rgba(57,23,7,.25)');stain.addColorStop(1,'rgba(57,23,7,0)');ctx.fillStyle=stain;ctx.beginPath();ctx.arc(x,y,70,0,Math.PI*2);ctx.fill()}
     agePaper(ctx,s,1.5);
@@ -277,8 +277,8 @@ function wrapText(ctx, text, x, y, maxWidth, lineHeight) {
 
 function createIntroLeftTexture(){
   return canvasTexture((ctx,s)=>{
-    const p=ctx.createRadialGradient(s*.45,s*.4,30,s*.5,s*.5,s*.72);p.addColorStop(0,'#dec99b');p.addColorStop(.72,'#b99a67');p.addColorStop(1,'#6f4b29');ctx.fillStyle=p;ctx.fillRect(0,0,s,s);noise(ctx,s,.12);
-    const edge=ctx.createRadialGradient(s/2,s/2,s*.38,s/2,s/2,s*.72);edge.addColorStop(.65,'rgba(43,19,6,0)');edge.addColorStop(1,'rgba(35,13,4,.72)');ctx.fillStyle=edge;ctx.fillRect(0,0,s,s);
+    const p=ctx.createRadialGradient(s*.45,s*.4,30,s*.5,s*.5,s*.72);p.addColorStop(0,'#F0E2C8');p.addColorStop(.72,'#c8aa78');p.addColorStop(1,'#815b31');ctx.fillStyle=p;ctx.fillRect(0,0,s,s);noise(ctx,s,.12);
+    const edge=ctx.createRadialGradient(s/2,s/2,s*.38,s/2,s/2,s*.72);edge.addColorStop(.65,'rgba(43,19,6,0)');edge.addColorStop(1,'rgba(35,13,4,.58)');ctx.fillStyle=edge;ctx.fillRect(0,0,s,s);
     agePaper(ctx,s,1.6);
     ctx.strokeStyle='rgba(69,39,18,.28)';ctx.lineWidth=5;ctx.setLineDash([18,9,4,12]);ctx.strokeRect(38,36,s-76,s-72);ctx.setLineDash([]);
     drawAnchor(ctx,s*.5,215,125);
@@ -320,6 +320,10 @@ const brass = new THREE.MeshStandardMaterial({ color:0x82602f, roughness:.48, me
 // --- Book construction --------------------------------------------------------
 const PAGE_W=5.15, PAGE_H=6.7, PAGE_COUNT=pageStories.length;
 const SHEET_W=PAGE_W-.78, SHEET_H=PAGE_H-.92, SHEET_X=PAGE_W/2+.02;
+const FIRST_PHOTO_RECT={x:132,y:225,w:750,h:390};
+const FIRST_PHOTO_CENTER_X=SHEET_X+(FIRST_PHOTO_RECT.x+FIRST_PHOTO_RECT.w/2)/1024*SHEET_W-SHEET_W/2;
+const FIRST_PHOTO_CENTER_Y=SHEET_H/2-(FIRST_PHOTO_RECT.y+FIRST_PHOTO_RECT.h/2)/1024*SHEET_H;
+const firstPhotoCamera={...cameraAngles.imageZoom,x:FIRST_PHOTO_CENTER_X,y:FIRST_PHOTO_CENTER_Y};
 const VIDEO_IMAGE_FOCUS_X=SHEET_X*.96;
 const VIDEO_SPREAD_FOCUS_X=SHEET_X*.12;
 const VIDEO_IMAGE_SCAN_START_X=SHEET_X*.84;
@@ -362,9 +366,9 @@ const pageVertex = `
   }`;
 function pageMaterial(texture, side, backFace=false) {
   return new THREE.ShaderMaterial({
-    uniforms:{map:{value:texture},uTurn:{value:0},uCurl:{value:.85},uReveal:{value:1},uWarmth:{value:new THREE.Color(0xffe2b0)},uPhotoRect:{value:new THREE.Vector4(0,0,0,0)},uPhotoProtect:{value:0}},
+    uniforms:{map:{value:texture},uTurn:{value:0},uCurl:{value:.85},uReveal:{value:1},uWarmth:{value:new THREE.Color(0xffe2b0)},uPhotoRect:{value:new THREE.Vector4(0,0,0,0)},uPhotoProtect:{value:0},uMirrorX:{value:backFace?1:0}},
     vertexShader:pageVertex,
-    fragmentShader:`uniform sampler2D map; uniform vec3 uWarmth; uniform vec4 uPhotoRect; uniform float uPhotoProtect; uniform float uReveal; varying vec2 vUv2; void main(){vec4 c=texture2D(map,vUv2);float wobble=sin(vUv2.y*91.0)*.012+sin(vUv2.x*67.0)*.009+sin((vUv2.x+vUv2.y)*143.0)*.004;float edge=smoothstep(0.0,.038+wobble,vUv2.x)*smoothstep(0.0,.041-wobble,1.0-vUv2.x)*smoothstep(0.0,.03-wobble,vUv2.y)*smoothstep(0.0,.032+wobble,1.0-vUv2.y);if(edge<.18)discard;float grain=fract(sin(dot(floor(vUv2*vec2(31.0,23.0)),vec2(12.9898,78.233)))*43758.5453);float threshold=vUv2.y*.35+grain*.65;float painted=smoothstep(threshold-.14,threshold+.08,uReveal*1.12);vec3 bare=vec3(.72,.57,.34)*(1.0-vUv2.x*.06);c.rgb=mix(bare,c.rgb,painted);float photoMask=step(uPhotoRect.x,vUv2.x)*step(vUv2.x,uPhotoRect.z)*step(uPhotoRect.y,vUv2.y)*step(vUv2.y,uPhotoRect.w)*uPhotoProtect;vec3 warmth=mix(uWarmth,vec3(1.0),photoMask);c.rgb*=mix(.31,1.0,edge)*warmth;gl_FragColor=vec4(c.rgb,1.0);}`,
+    fragmentShader:`uniform sampler2D map; uniform vec3 uWarmth; uniform vec4 uPhotoRect; uniform float uPhotoProtect; uniform float uReveal; uniform float uMirrorX; varying vec2 vUv2; void main(){vec2 pageUv=mix(vUv2,vec2(1.0-vUv2.x,vUv2.y),uMirrorX);vec4 c=texture2D(map,pageUv);float wobble=sin(pageUv.y*91.0)*.012+sin(pageUv.x*67.0)*.009+sin((pageUv.x+pageUv.y)*143.0)*.004;float edge=smoothstep(0.0,.038+wobble,pageUv.x)*smoothstep(0.0,.041-wobble,1.0-pageUv.x)*smoothstep(0.0,.03-wobble,pageUv.y)*smoothstep(0.0,.032+wobble,1.0-pageUv.y);if(edge<.18)discard;float grain=fract(sin(dot(floor(pageUv*vec2(31.0,23.0)),vec2(12.9898,78.233)))*43758.5453);float threshold=pageUv.y*.35+grain*.65;float painted=smoothstep(threshold-.14,threshold+.08,uReveal*1.12);vec3 bare=vec3(.72,.57,.34)*(1.0-pageUv.x*.06);c.rgb=mix(bare,c.rgb,painted);float photoMask=step(uPhotoRect.x,pageUv.x)*step(pageUv.x,uPhotoRect.z)*step(uPhotoRect.y,pageUv.y)*step(pageUv.y,uPhotoRect.w)*uPhotoProtect;vec3 warmth=mix(uWarmth,vec3(1.0),photoMask);c.rgb*=mix(.31,1.0,edge)*warmth;gl_FragColor=vec4(c.rgb,1.0);}`,
     side, transparent:false, depthWrite:true, polygonOffset:true, polygonOffsetFactor:backFace?1:-1, polygonOffsetUnits:backFace?1:-1
   });
 }
@@ -452,9 +456,9 @@ const tableMat=new THREE.MeshStandardMaterial({color:0xb7cad3,roughness:.84,meta
 const table=new THREE.Mesh(new THREE.CylinderGeometry(15,15,1.1,64),tableMat);table.rotation.x=Math.PI/2;table.position.z=-1.4;table.receiveShadow=true;world.add(table);
 
 const mapTexture=canvasTexture((ctx,s)=>{
-  const g=ctx.createRadialGradient(s*.42,s*.4,20,s*.5,s*.5,s*.76);g.addColorStop(0,'#edf5f7');g.addColorStop(.66,'#cddde3');g.addColorStop(1,'#8fa9b4');ctx.fillStyle=g;ctx.fillRect(0,0,s,s);noise(ctx,s,.08);
-  // Stormy blue-green sea washes under the old navigation ink.
-  ctx.globalCompositeOperation='multiply';[[.34,.42,.28],[.68,.64,.24],[.72,.27,.18]].forEach((w,i)=>{const wash=ctx.createRadialGradient(s*w[0],s*w[1],10,s*w[0],s*w[1],s*w[2]);wash.addColorStop(0,`rgba(${i===1?'31,93,89':'39,79,82'},.3)`);wash.addColorStop(1,'rgba(28,73,76,0)');ctx.fillStyle=wash;ctx.fillRect(0,0,s,s)});ctx.globalCompositeOperation='source-over';
+  const g=ctx.createRadialGradient(s*.42,s*.4,20,s*.5,s*.5,s*.76);g.addColorStop(0,'#FAEBD7');g.addColorStop(.58,'#ead2ad');g.addColorStop(1,'#c49d67');ctx.fillStyle=g;ctx.fillRect(0,0,s,s);noise(ctx,s,.08);
+  // Warm antique-white washes under the old navigation ink.
+  ctx.globalCompositeOperation='multiply';[[.34,.42,.28],[.68,.64,.24],[.72,.27,.18]].forEach((w,i)=>{const wash=ctx.createRadialGradient(s*w[0],s*w[1],10,s*w[0],s*w[1],s*w[2]);wash.addColorStop(0,`rgba(${i===1?'145,105,54':'154,116,67'},.18)`);wash.addColorStop(1,'rgba(154,116,67,0)');ctx.fillStyle=wash;ctx.fillRect(0,0,s,s)});ctx.globalCompositeOperation='source-over';
   ctx.strokeStyle='rgba(41,30,20,.24)';ctx.lineWidth=1;for(let i=70;i<s;i+=70){ctx.beginPath();ctx.moveTo(i,0);ctx.lineTo(i,s);ctx.stroke();ctx.beginPath();ctx.moveTo(0,i);ctx.lineTo(s,i);ctx.stroke()}
   ctx.strokeStyle='rgba(39,25,15,.82)';ctx.fillStyle='rgba(54,39,23,.34)';ctx.lineWidth=9;
   ctx.beginPath();ctx.moveTo(0,s*.24);ctx.bezierCurveTo(s*.14,s*.18,s*.17,s*.35,s*.29,s*.3);ctx.bezierCurveTo(s*.4,s*.25,s*.37,s*.08,s*.53,0);ctx.lineTo(0,0);ctx.closePath();ctx.fill();ctx.stroke();
@@ -467,9 +471,9 @@ const mapTexture=canvasTexture((ctx,s)=>{
   ctx.font='italic 24px Georgia';ctx.fillText('Dead Man’s Passage',s*.72,s*.48);ctx.fillText('Isla del Cuervo',s*.37,s*.63);
   // Small inked sea serpent for unmistakable old-world cartography.
   ctx.strokeStyle='rgba(32,25,19,.58)';ctx.lineWidth=8;ctx.beginPath();ctx.moveTo(s*.42,s*.33);ctx.bezierCurveTo(s*.47,s*.25,s*.5,s*.42,s*.55,s*.32);ctx.bezierCurveTo(s*.6,s*.23,s*.62,s*.36,s*.65,s*.3);ctx.stroke();ctx.beginPath();ctx.arc(s*.655,s*.285,16,0,Math.PI*2);ctx.stroke();
-  const edge=ctx.createRadialGradient(s/2,s/2,s*.4,s/2,s/2,s*.72);edge.addColorStop(.62,'rgba(21,41,52,0)');edge.addColorStop(1,'rgba(21,41,52,.34)');ctx.fillStyle=edge;ctx.fillRect(0,0,s,s);
+  const edge=ctx.createRadialGradient(s/2,s/2,s*.4,s/2,s/2,s*.72);edge.addColorStop(.62,'rgba(87,52,22,0)');edge.addColorStop(1,'rgba(87,52,22,.24)');ctx.fillStyle=edge;ctx.fillRect(0,0,s,s);
 });
-const mapMat=new THREE.MeshStandardMaterial({map:mapTexture,color:0xe5f1f5,roughness:.98,side:THREE.DoubleSide});
+const mapMat=new THREE.MeshStandardMaterial({map:mapTexture,color:0xf6dec1,roughness:.98,side:THREE.DoubleSide});
 const chart=new THREE.Mesh(new THREE.PlaneGeometry(22,14,20,12),mapMat);chart.position.set(0,0,-.81);chart.rotation.z=.055;chart.receiveShadow=true;world.add(chart);
 
 // Layered letters and chart fragments reproduce the reference video's tactile
@@ -478,10 +482,10 @@ function createScrap(label,x,y,w,h,rotation,tint){
   const texture=canvasTexture((ctx,s)=>{ctx.fillStyle=tint;ctx.fillRect(0,0,s,s);noise(ctx,s,.1);ctx.strokeStyle='rgba(77,43,19,.26)';ctx.lineWidth=8;ctx.strokeRect(24,24,s-48,s-48);ctx.fillStyle='rgba(65,39,20,.6)';ctx.font='italic 47px Georgia';ctx.textAlign='center';ctx.fillText(label,s/2,125);ctx.font='italic 25px Georgia';for(let i=0;i<7;i++)ctx.fillText('—  ———  ——  —————  —',s/2,230+i*70);drawCompassRose(ctx,s*.77,s*.75,s*.1)},512);
   const scrap=new THREE.Mesh(new THREE.PlaneGeometry(w,h,4,3),new THREE.MeshStandardMaterial({map:texture,roughness:1,side:THREE.DoubleSide}));scrap.position.set(x,y,-.63);scrap.rotation.z=rotation;scrap.castShadow=scrap.receiveShadow=true;world.add(scrap);
 }
-createScrap('Port Royal',-4.6,2.5,4.2,2.5,-.17,'#d8e7ec');
-createScrap('Cape of Storms',4.8,2.7,4.5,2.7,.13,'#e7f0f3');
-createScrap('Admiralty Chart',-4.8,-2.2,4.1,2.35,.1,'#c9dce3');
-createScrap('Letter of Marque',4.7,-2.3,4.0,2.4,-.12,'#eef4f6');
+createScrap('Port Royal',-4.6,2.5,4.2,2.5,-.17,'#F0E2C8');
+createScrap('Cape of Storms',4.8,2.7,4.5,2.7,.13,'#ead7b7');
+createScrap('Admiralty Chart',-4.8,-2.2,4.1,2.35,.1,'#dcc49b');
+createScrap('Letter of Marque',4.7,-2.3,4.0,2.4,-.12,'#F0E2C8');
 
 const darkMetal=new THREE.MeshStandardMaterial({color:0x2b1d14,roughness:.35,metalness:.72});
 const wood=new THREE.MeshStandardMaterial({color:0x4c2714,roughness:.72});
@@ -510,7 +514,7 @@ function createCompass(){
   const glass=new THREE.Mesh(new THREE.CircleGeometry(1.12,64),new THREE.MeshPhysicalMaterial({color:0xcbe4df,transparent:true,opacity:.11,roughness:.08,metalness:0,clearcoat:.6,clearcoatRoughness:.12,depthWrite:false}));glass.position.z=.29;g.add(glass);
   for(let i=0;i<4;i++){const a=i*Math.PI/2,lug=new THREE.Mesh(new THREE.BoxGeometry(.22,.34,.09),brass);lug.position.set(Math.cos(a)*1.38,Math.sin(a)*1.38,.04);lug.rotation.z=a;g.add(lug)}
   g.userData.needle=needleGroup;g.userData.rose=rose;g.userData.face=face;g.userData.glass=glass;
-  g.position.set(-7.65,-4.75,-.72);g.rotation.z=-.28;g.scale.setScalar(.78);return g;
+  g.position.set(-7.65,-4.15,-.72);g.rotation.z=-.28;g.scale.setScalar(.78);return g;
 }
 const compass=createCompass();world.add(compass);
 
@@ -589,7 +593,7 @@ function createLantern(){
   for(let i=0;i<4;i++){const a=i*Math.PI/2;const rod=new THREE.Mesh(new THREE.CylinderGeometry(.035,.035,2.1,8),darkMetal);rod.position.set(Math.cos(a)*.55,Math.sin(a)*.55,1.05);rod.rotation.x=Math.PI/2;g.add(rod)}
   const glass=new THREE.Mesh(new THREE.CylinderGeometry(.54,.6,1.85,24,1,true),new THREE.MeshPhysicalMaterial({color:0xf6a746,transparent:true,opacity:.18,roughness:.15,side:THREE.DoubleSide}));glass.rotation.x=Math.PI/2;glass.position.z=1.04;g.add(glass);
   const flame=new THREE.Mesh(new THREE.SphereGeometry(.16,16,12),new THREE.MeshBasicMaterial({color:0xffa22f}));flame.scale.y=1.7;flame.position.z=.85;g.add(flame);
-  const glow=new THREE.PointLight(0xffb86e,4,8,2);glow.position.z=1;g.add(glow);g.position.set(-6.15,3.65,-.45);g.scale.setScalar(1.16);return g;
+  const glow=new THREE.PointLight(0xffb86e,1.15,6.2,2.4);glow.position.z=1;g.add(glow);g.position.set(-6.15,3.65,-.45);g.scale.setScalar(1.16);return g;
 }const lantern=createLantern();world.add(lantern);
 
 function createRope(){const pts=[];for(let i=0;i<26;i++){const a=i/25*Math.PI*2.2;pts.push(new THREE.Vector3(-5.8+Math.cos(a)*(1.7+i*.018),-.4+Math.sin(a)*1.2,-.45+i*.002))}const curve=new THREE.CatmullRomCurve3(pts);const rope=new THREE.Mesh(new THREE.TubeGeometry(curve,90,.09,8,false),new THREE.MeshStandardMaterial({color:0x80623b,roughness:1}));rope.castShadow=true;world.add(rope)}createRope();
@@ -597,22 +601,22 @@ function createRope(){const pts=[];for(let i=0;i<26;i++){const a=i/25*Math.PI*2.
 const seal=new THREE.Mesh(new THREE.CylinderGeometry(.48,.52,.12,32),wax);seal.rotation.x=Math.PI/2;seal.position.set(5.45,-3.82,-.35);seal.castShadow=true;world.add(seal);
 const sealMark=new THREE.Mesh(new THREE.TorusGeometry(.23,.045,8,24),new THREE.MeshStandardMaterial({color:0x481008,roughness:.7}));sealMark.position.set(5.45,-3.82,-.26);world.add(sealMark);
 
-function noteTexture(text){return canvasTexture((ctx,s)=>{ctx.fillStyle='#d8e7ec';ctx.fillRect(0,0,s,s);noise(ctx,s,.07);ctx.fillStyle='rgba(35,48,58,.72)';ctx.font='italic 64px Georgia';ctx.textAlign='center';wrapText(ctx,text,70,180,s-140,78);ctx.strokeStyle='rgba(64,84,96,.55)';ctx.lineWidth=13;ctx.beginPath();ctx.moveTo(s*.7,s*.72);ctx.lineTo(s*.82,s*.84);ctx.moveTo(s*.82,s*.72);ctx.lineTo(s*.7,s*.84);ctx.stroke()},512)}
+function noteTexture(text){return canvasTexture((ctx,s)=>{ctx.fillStyle='#F0E2C8';ctx.fillRect(0,0,s,s);noise(ctx,s,.07);ctx.fillStyle='rgba(58,39,22,.72)';ctx.font='italic 64px Georgia';ctx.textAlign='center';wrapText(ctx,text,70,180,s-140,78);ctx.strokeStyle='rgba(92,56,30,.55)';ctx.lineWidth=13;ctx.beginPath();ctx.moveTo(s*.7,s*.72);ctx.lineTo(s*.82,s*.84);ctx.moveTo(s*.82,s*.72);ctx.lineTo(s*.7,s*.84);ctx.stroke()},512)}
 [['Trust the northern star',-4.7,-2.15,-.45,-.22],['To be continued…',5.0,-3.75,-.44,.16]].forEach(n=>{const note=new THREE.Mesh(new THREE.PlaneGeometry(2.3,1.45,5,4),new THREE.MeshStandardMaterial({map:noteTexture(n[0]),roughness:1,side:THREE.DoubleSide}));note.position.set(n[1],n[2],n[3]);note.rotation.z=n[4];note.castShadow=note.receiveShadow=true;world.add(note)});
 
 // --- Lighting, atmospheric dust and volumetric shafts ------------------------
 scene.add(new THREE.AmbientLight(0xf5fbff,1.12));
-scene.add(new THREE.HemisphereLight(0xeaf7ff,0xd8e7ea,2.18));
-const key=new THREE.SpotLight(0xfff8e8,134,48,.76,.9,1);key.position.set(-9,6,16);key.target.position.set(1,0,0);key.castShadow=true;key.shadow.mapSize.set(highQuality?2048:1024,highQuality?2048:1024);key.shadow.bias=-.0002;scene.add(key,key.target);
-const fill=new THREE.PointLight(0xeaf7ff,36,28,2);fill.position.set(8,4,7);scene.add(fill);
-const rim=new THREE.PointLight(0xcfeeff,24,26,2);rim.position.set(-8,3,6);scene.add(rim);
+scene.add(new THREE.HemisphereLight(0xeaf7ff,0xd8e7ea,1.48));
+const key=new THREE.SpotLight(0xfff8e8,72,48,.76,.9,1);key.position.set(-9,6,16);key.target.position.set(1.6,-.2,0);key.castShadow=true;key.shadow.mapSize.set(highQuality?2048:1024,highQuality?2048:1024);key.shadow.bias=-.0002;scene.add(key,key.target);
+const fill=new THREE.PointLight(0xeaf7ff,22,28,2);fill.position.set(8,4,7);scene.add(fill);
+const rim=new THREE.PointLight(0xcfeeff,14,26,2);rim.position.set(-8,3,6);scene.add(rim);
 
 function addLightRay(x,y,rotation,scale){
   const geo=new THREE.CylinderGeometry(.15,2.5,14,32,1,true);
   const mat=new THREE.ShaderMaterial({transparent:true,depthWrite:false,blending:THREE.AdditiveBlending,side:THREE.DoubleSide,uniforms:{color:{value:new THREE.Color(0xf4fbff)}},vertexShader:'varying vec2 vUv; void main(){vUv=uv;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',fragmentShader:'uniform vec3 color;varying vec2 vUv;void main(){float a=sin(vUv.y*3.14159)*smoothstep(0.,.18,vUv.x)*smoothstep(0.,.18,1.-vUv.x);gl_FragColor=vec4(color,a*.024);}'});
   const ray=new THREE.Mesh(geo,mat);ray.position.set(x,y,8);ray.rotation.set(.55,rotation,.15);ray.scale.setScalar(scale);scene.add(ray);
 }
-addLightRay(-6,-2,-.5,1.1);addLightRay(-3,1,-.2,.72);
+addLightRay(-6,-2,-.5,.62);addLightRay(-3,1,-.2,.42);
 
 const dustCount=compact?500:1300,dustGeo=new THREE.BufferGeometry(),dustPos=new Float32Array(dustCount*3),dustSeed=new Float32Array(dustCount);
 for(let i=0;i<dustCount;i++){dustPos[i*3]=(Math.random()-.5)*24;dustPos[i*3+1]=(Math.random()-.5)*16;dustPos[i*3+2]=Math.random()*15-2;dustSeed[i]=Math.random()}
@@ -631,7 +635,7 @@ function updateUI(){
   ui.chapterDots.forEach((dot,index)=>dot.classList.toggle('active',index===currentPage));
 }
 function stopAutoplay(){if(autoplayTimer){clearTimeout(autoplayTimer);autoplayTimer=null}}
-function scheduleAutoplay(){stopAutoplay();if(currentPage<PAGE_COUNT-1)autoplayTimer=setTimeout(()=>turnTo(currentPage+1,true),5200)}
+function scheduleAutoplay(){stopAutoplay();if(currentPage<PAGE_COUNT-1)autoplayTimer=setTimeout(()=>turnTo(currentPage+1,true),2400)}
 function setPageProgress(page,p){
   page.userData.progress=p;page.rotation.y=-p*Math.PI;
   page.userData.frontMat.uniforms.uTurn.value=p;page.userData.backMat.uniforms.uTurn.value=p;
@@ -673,6 +677,8 @@ function turnTo(next,automatic=false){
   const targetZ=forward ? leftPageZ(page.userData.index) : rightPageZ(page.userData.index);
   const state={p:page.userData.progress};
   const revealDuration=prefersReducedMotion?.42:1.05;
+  const rightRevealDuration=prefersReducedMotion?.28:.72;
+  const rightRevealDelay=prefersReducedMotion?.06:.22;
   if(forward){
     // Reveal the image on the reverse of the turning sheet and the image on
     // the next right-hand sheet with the same aged-ink animation.
@@ -680,14 +686,14 @@ function turnTo(next,automatic=false){
     const nextFrontReveal=pages[next].userData.frontMat.uniforms.uReveal;
     gsap.killTweensOf(backReveal);gsap.killTweensOf(nextFrontReveal);
     gsap.fromTo(backReveal,{value:0},{value:1,duration:revealDuration,delay:prefersReducedMotion?.12:.48,ease:'power2.out'});
-    gsap.fromTo(nextFrontReveal,{value:0},{value:1,duration:revealDuration,delay:prefersReducedMotion?.18:.72,ease:'power2.out'});
+    gsap.fromTo(nextFrontReveal,{value:0},{value:1,duration:rightRevealDuration,delay:rightRevealDelay,ease:'power2.out'});
   }else{
     // Replaying a previous page reveals its front face as it returns right.
     const frontReveal=page.userData.frontMat.uniforms.uReveal;
     gsap.killTweensOf(frontReveal);
-    gsap.fromTo(frontReveal,{value:0},{value:1,duration:revealDuration,delay:prefersReducedMotion?.12:.48,ease:'power2.out'});
+    gsap.fromTo(frontReveal,{value:0},{value:1,duration:rightRevealDuration,delay:rightRevealDelay,ease:'power2.out'});
   }
-  gsap.fromTo('.light-leak',{opacity:.32},{opacity:.72,duration:.5,yoyo:true,repeat:1,ease:'sine.inOut'});
+  gsap.fromTo('.light-leak',{opacity:.055},{opacity:.14,duration:.5,yoyo:true,repeat:1,ease:'sine.inOut'});
   const pullbackDuration=prefersReducedMotion?.2:1.65;
   const flipStart=prefersReducedMotion?.08:1.55;
   const flipDuration=prefersReducedMotion?.45:1.85;
@@ -736,15 +742,15 @@ function enterExperience(){
     // page block. Positive rotation would send it underneath the book.
     .to(coverPivot.rotation,{y:-Math.PI,duration:openDuration,ease:'power3.inOut'},prefersReducedMotion ? .42 : 1.42)
     .to(world.position,{...worldPositions.open,duration:openDuration,ease:'power2.inOut'},prefersReducedMotion ? .42 : 1.42)
-    .to(openingState,{focusX:VIDEO_IMAGE_FOCUS_X,duration:openDuration*.85,ease:'power2.inOut'},prefersReducedMotion ? .42 : 1.42)
-    .to(openingState,{focusY:VIDEO_FIRST_IMAGE_FOCUS_Y,duration:openDuration*.85,ease:'power2.inOut'},prefersReducedMotion ? .42 : 1.42)
+    .to(openingState,{focusX:FIRST_PHOTO_CENTER_X,duration:openDuration*.85,ease:'power2.inOut'},prefersReducedMotion ? .42 : 1.42)
+    .to(openingState,{focusY:FIRST_PHOTO_CENTER_Y,duration:openDuration*.85,ease:'power2.inOut'},prefersReducedMotion ? .42 : 1.42)
     .to(camera.position,{...cameraAngles.coverOpen,duration:openDuration*.58,ease:'power2.inOut'},prefersReducedMotion ? .42 : 1.42)
-    .to(camera.position,{...cameraAngles.imageZoom,duration:openDuration*.82,ease:'sine.inOut'},prefersReducedMotion ? .72 : 2.45)
+    .to(camera.position,{...firstPhotoCamera,duration:openDuration*.82,ease:'sine.inOut'},prefersReducedMotion ? .72 : 2.45)
     .to(camera,{fov:cameraFov.close,duration:openDuration*.82,ease:'sine.inOut',onUpdate:()=>camera.updateProjectionMatrix()},prefersReducedMotion ? .72 : 2.45)
-    .fromTo(openingState,{focusX:VIDEO_IMAGE_SCAN_START_X},{focusX:VIDEO_IMAGE_SCAN_END_X,duration:prefersReducedMotion ? .3 : 3.35,ease:'sine.inOut',immediateRender:false},prefersReducedMotion ? .82 : 2.72)
-    .to(openingState,{focusY:VIDEO_FIRST_IMAGE_FOCUS_Y*.84,duration:prefersReducedMotion ? .3 : 3.35,ease:'sine.inOut'},prefersReducedMotion ? .82 : 2.72)
+    .to(openingState,{focusX:FIRST_PHOTO_CENTER_X,duration:prefersReducedMotion ? .3 : 3.35,ease:'sine.inOut'},prefersReducedMotion ? .82 : 2.72)
+    .to(openingState,{focusY:FIRST_PHOTO_CENTER_Y,duration:prefersReducedMotion ? .3 : 3.35,ease:'sine.inOut'},prefersReducedMotion ? .82 : 2.72)
     .to(pages[currentPage].userData.frontMat.uniforms.uReveal,{value:1,duration:1.25,ease:'power2.out'},prefersReducedMotion ? .68 : 3.42)
-    .fromTo('.light-leak',{opacity:.25},{opacity:.8,duration:.55,yoyo:true,repeat:1,ease:'sine.inOut'},prefersReducedMotion ? .55 : 3.32)
+    .fromTo('.light-leak',{opacity:.05},{opacity:.16,duration:.55,yoyo:true,repeat:1,ease:'sine.inOut'},prefersReducedMotion ? .55 : 3.32)
 
   // 4. Settle only after the rotation is complete. Overlapping these motions
   // caused the cover to pass through its page block on the final quarter-turn.
@@ -895,11 +901,11 @@ if (!prefersReducedMotion) gsap.to(world.rotation,{y:.012,x:-.018,duration:8,eas
 function animate(){
   const t=clock.getElapsedTime();dustMat.uniforms.uTime.value=t;
   // Small camera drift keeps the frame alive without fighting the main GSAP move.
-  const px=entered?pointer.x*.09:pointer.x*.18,py=entered?pointer.y*.07:pointer.y*.13;
+  const px=openingState.active?0:(entered?pointer.x*.09:pointer.x*.18),py=openingState.active?0:(entered?pointer.y*.07:pointer.y*.13);
   lookTarget.set(world.position.x+openingState.focusX+px,world.position.y+openingState.focusY-py,0);
   camera.lookAt(lookTarget);
-  key.intensity=(openingState.active?146:138)+Math.sin(t*.7)*1.2;
-  const lanternGlow=lantern.children.find(child=>child.isPointLight);if(lanternGlow)lanternGlow.intensity=3+Math.sin(t*8.3)*.35+Math.sin(t*13.7)*.2;
+  key.intensity=(openingState.active?78:72)+Math.sin(t*.7)*.65;
+  const lanternGlow=lantern.children.find(child=>child.isPointLight);if(lanternGlow)lanternGlow.intensity=1.05+Math.sin(t*8.3)*.12+Math.sin(t*13.7)*.08;
   if(compass?.userData.needle){
     const panic=t*(5.8+Math.sin(t*1.7)*2.4)+Math.sin(t*11.5)*.42+Math.sin(t*23.3)*.12;
     compass.userData.needle.rotation.z=panic;
